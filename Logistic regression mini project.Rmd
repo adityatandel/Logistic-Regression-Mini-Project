@@ -1,0 +1,235 @@
+---
+title: "Logistic Regression Mini-Project"
+output: html_document
+---
+##   Use the NH11 data set that we loaded earlier.
+
+##   1. Use glm str(NH11$everwrk, NH11$age_p, NH11$r_maritl)
+##      (everwrk) using age (age_p) and marital status (r_maritl).
+
+# Checking levels for everwrk variable
+
+```{r} 
+levels(NH11$everwrk)
+```
+
+## [1] "1 Yes"             "2 No"              "7 Refused"         "8 Not ascertained" "9 Don't know"  
+
+## Removing all factors except "Yes"" and "No"" 
+
+```{r} 
+NH11$everwrk <- factor(NH11$everwrk, levels = c("2 No", "1 Yes"))}
+```
+
+## Checking structure of variable
+
+```{r}
+levels(NH11$everwrk)
+```
+
+## [1] "2 No"  "1 Yes"
+
+# Checking levels for everwrk variable
+
+```{r}
+levels(NH11$r_maritl)
+```
+
+## [1] "0 Under 14 years"                        "1 Married - spouse in household"        
+## [3] "2 Married - spouse not in household"     "3 Married - spouse in household unknown"
+## [5] "4 Widowed"                               "5 Divorced"                             
+## [7] "6 Separated"                             "7 Never married"                        
+## [9] "8 Living with partner"                   "9 Unknown marital status"        
+
+## Removing all unknown factors for rMaritl
+
+```{r}
+NH11$r_maritl <- factor(NH11$r_maritl, levels = c("0 Under 14 years", "1 Married - spouse in household", "2 Married - spouse not in household", "4 Widowed", "5 Divorced", "6 Separated", "7 Never married", "8 Living with partner"))
+```
+
+## Checking new levels for rMaritl
+
+```{r}
+> levels(NH11$r_maritl)
+```
+
+## [1] "0 Under 14 years"                    "1 Married - spouse in household"    
+## [3] "2 Married - spouse not in household" "4 Widowed"                          
+## [5] "5 Divorced"                          "6 Separated"                        
+## [7] "7 Never married"                     "8 Living with partner"  
+
+## Removing the rest of the variables and keeping only everwrk, r_maritl and age_p which are relevant to building the prediction model
+## Naming the new dataset "NH11mini"
+
+```{r}
+NH11mini <- NH11 %>% select(everwrk, r_maritl, age_p)
+```
+
+## Check summary of the new dataset
+```{r}
+summary(NH11mini)
+```
+
+##everwrk                                 r_maritl         age_p      
+ 2 No : 1887   1 Married - spouse in household:13943   Min.   :18.00  
+ 1 Yes:12153   7 Never married                : 7763   1st Qu.:33.00  
+ NA's :18974   5 Divorced                     : 4511   Median :47.00  
+               4 Widowed                      : 3069   Mean   :48.11  
+               8 Living with partner          : 2002   3rd Qu.:62.00  
+               (Other)                        : 1652   Max.   :85.00  
+               NA's                           :   74                  
+               
+## As you can see there are a lot of missing values. By removing them we will lose a lot of data
+
+## Set seed first
+
+```{r}
+set.seed(144)
+```
+
+## Create training and test sets by splitting the original dataset
+
+```{r}
+split <- sample.split(NH11mini$everwrk, SplitRatio = .6)
+train_NH11 <- NH11mini %>% filter(split == FALSE)
+test_NH11 <- NH11mini %>% filter(split == TRUE)
+```
+
+## Starting to build models
+
+## Do a baseline model first
+```{r}
+table(train_NH11$everwrk)
+```
+
+## 2 No 1 Yes 
+##  755  4861
+
+## The baseline model tells us that the chances of getting people who have worked before is higher than those who have not worked
+
+## First model using all independent variables in the training dataset. Then checking the summary for the model
+
+```{r}
+mod1 <- glm(everwrk ~., data = train_NH11, family = "binomial")
+summary(mod1)
+```
+
+##Call:
+##glm(formula = everwrk ~ ., family = "binomial", data = train_NH11)
+
+##Deviance Residuals: 
+##    Min       1Q   Median       3Q      Max  
+##-2.6840   0.3334   0.4315   0.5569   1.0615  
+
+##Coefficients:
+##                                             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)                                  0.377760   0.149456   2.528 0.011485 *  
+## r_maritl2 Married - spouse not in household  0.017495   0.348235   0.050 0.959932    
+## r_maritl4 Widowed                           -0.696405   0.133400  -5.220 1.79e-07 ***
+## r_maritl5 Divorced                           0.680955   0.180199   3.779 0.000158 ***
+## r_maritl6 Separated                          0.173915   0.244624   0.711 0.477117    
+## r_maritl7 Never married                     -0.353498   0.109912  -3.216 0.001299 ** 
+## r_maritl8 Living with partner                0.285696   0.200882   1.422 0.154964    
+## age_p                                        0.031446   0.002622  11.993  < 2e-16 ***
+---
+## Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+## (Dispersion parameter for binomial family taken to be 1)
+
+##    Null deviance: 4419.3  on 5604  degrees of freedom
+## Residual deviance: 4094.6  on 5597  degrees of freedom
+##  (18985 observations deleted due to missingness)
+## AIC: 4110.6
+
+## You can see "r_maritl5 Divorced" has a high positive correlation with everwrk while as "r_maritl4 Widowed" and "r_maritl7 Never married" have negative correlation
+
+## Checking how accurate this model is on the test data
+
+```{r}
+pred1_NH11 <- predict(mod1, type = "response", newdata = test_NH11)
+```
+
+## Create confusion matrix
+```{r}
+table(test_NH11$everwrk, pred1_NH11 > 0.5)
+```
+
+##        TRUE
+##  2 No  1127
+##  1 Yes 7273
+
+## Trying other threshold values
+
+```{r}
+table(test_NH11$everwrk, pred1_NH11 > 0.66)
+```
+
+##        FALSE TRUE
+##  2 No     81 1046
+##  1 Yes    51 7222
+
+## Mod1 with a threshold value of .66 seems to give us the best accuracy rate of ~86%
+
+## Let's try another model without age_p
+```{r}
+mod2 <- glm(everwrk ~ r_maritl, data = train_NH11, family = "binomial")
+```
+
+## Summary
+```{r}
+summary(mod2)
+```
+
+## Call:
+## glm(formula = everwrk ~ r_maritl, family = "binomial", data = train_NH11)
+
+## Deviance Residuals: 
+##    Min       1Q   Median       3Q      Max  
+## -2.3929   0.3429   0.5021   0.5021   0.7501  
+
+## Coefficients:
+##                                            Estimate Std. Error z value Pr(>|z|)    
+##(Intercept)                                  2.00724    0.06580  30.505  < 2e-16 ***
+##r_maritl2 Married - spouse not in household  0.01871    0.31409   0.060    0.952    
+##r_maritl4 Widowed                            0.04017    0.11894   0.338    0.736    
+##r_maritl5 Divorced                           0.79682    0.17027   4.680 2.87e-06 ***
+##r_maritl6 Separated                          0.13283    0.24538   0.541    0.588    
+##r_maritl7 Never married                     -0.88303    0.09611  -9.188  < 2e-16 ***
+##r_maritl8 Living with partner               -0.16621    0.19860  -0.837    0.403    
+##---
+## Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+##(Dispersion parameter for binomial family taken to be 1)
+
+##    Null deviance: 4430.8  on 5605  degrees of freedom
+##Residual deviance: 4275.5  on 5599  degrees of freedom
+##  (18984 observations deleted due to missingness)
+##AIC: 4289.5
+
+## AIC of mod2 is lower than mod1. 
+
+## Predict on test data based on mod2 with different threashold levels to check which one would give us the maximum accurary rate
+
+```{r}
+pred2_NH11 <- predict(mod2, type = "response", newdata = test_NH11)
+table(test_NH11$everwrk, pred2_NH11 > 0.8)
+table(test_NH11$everwrk, pred2_NH11 > 0.7)
+table(test_NH11$everwrk, pred2_NH11 > 0.76)
+```
+
+##         FALSE TRUE
+##  2 No    432  695
+##  1 Yes  1310 5963
+
+##        TRUE
+##  2 No  1127
+##  1 Yes 7273
+
+##        FALSE TRUE
+##  2 No    432  695
+##  1 Yes  1310 5963
+
+## The higest accuray rate we get with mod2 and threshold value of .76 is 71%
+
+## So we will stick with mod1 as our best logistic regression model
+
